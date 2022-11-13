@@ -14,7 +14,7 @@ import (
 
 var sqlmsg ordWB
 
-// var err error
+var err error
 var retID int8
 
 const (
@@ -76,9 +76,9 @@ func main() {
 		}
 		fmt.Println(sqlmsg.Delivery.Name)
 
-		db, err2 := sql.Open("pgx", "postgres://postgres:Parol123!@localhost:5432/wb_l0")
-		if err2 != nil {
-			fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err2)
+		db, err := sql.Open("pgx", "postgres://postgres:Parol123!@localhost:5432/wb_l0")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 			os.Exit(1)
 		}
 
