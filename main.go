@@ -66,7 +66,7 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
-	sub, _ := sc.Subscribe(channel, func(m *stan.Msg) {
+	sub, err5 := sc.Subscribe(channel, func(m *stan.Msg) {
 
 		//fmt.Printf("Received a message: %s\n", string(m.Data))
 		err3 := json.Unmarshal(m.Data, &sqlmsg)
@@ -75,12 +75,12 @@ func main() {
 		}
 		fmt.Println(sqlmsg.Delivery.Name)
 		//writeSqlmsg(sqlMessage)
-		fmt.Println(sqlmsg)
+		//fmt.Println(sqlmsg.Delivery.City)
 
 		db, err2 := sql.Open("pgx", "postgres://postgres:Parol123!@localhost:5432/wb_l0")
 		if err2 != nil {
 			fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err2)
-			os.Exit(1)
+			//os.Exit(1)
 		}
 
 		err = db.QueryRow("INSERT INTO orders(id,order_uid,track_number,entry,locale,internal_signature,customer_id,delivery_service,shardkey,sm_id,date_created,oof_shard) VALUES (default, $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id", sqlmsg.OrderUID, sqlmsg.TrackNumber, sqlmsg.Entry, sqlmsg.Locale, sqlmsg.InternalSignature, sqlmsg.CustomerID, sqlmsg.DeliveryService, sqlmsg.Shardkey, sqlmsg.SmID, sqlmsg.DateCreated, sqlmsg.OofShard).Scan(&retID)
@@ -105,6 +105,9 @@ func main() {
 		fmt.Println(sqlmsg.Items)
 		defer db.Close()
 	}, stan.StartWithLastReceived())
+	if err5 != nil {
+		log.Println(err5)
+	}
 	//работа с SQL
 
 	//res, err := db.Exec //работа с SQL -
