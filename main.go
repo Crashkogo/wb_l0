@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	stan "github.com/nats-io/stan.go"
-	"log"
+	log "log"
 	"os"
 	"time"
 	//"github.com/shijuvar/gokit/examples/nats-streaming/pb"
@@ -13,14 +13,15 @@ import (
 )
 
 var sqlmsg ordWB
-var err error
+
+// var err error
 var retID int8
 
 const (
 	clusterID = "wb_cluster"
 	clientID  = "wbID"
 	channel   = "wb_channel"
-	durableID = "myDurable"
+	//durableID = "myDurable"
 )
 
 //	func writeSqlmsg(sqlmsg ordWB) {
@@ -80,7 +81,7 @@ func main() {
 		db, err2 := sql.Open("pgx", "postgres://postgres:Parol123!@localhost:5432/wb_l0")
 		if err2 != nil {
 			fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err2)
-			//os.Exit(1)
+			os.Exit(1)
 		}
 
 		err = db.QueryRow("INSERT INTO orders(id,order_uid,track_number,entry,locale,internal_signature,customer_id,delivery_service,shardkey,sm_id,date_created,oof_shard) VALUES (default, $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id", sqlmsg.OrderUID, sqlmsg.TrackNumber, sqlmsg.Entry, sqlmsg.Locale, sqlmsg.InternalSignature, sqlmsg.CustomerID, sqlmsg.DeliveryService, sqlmsg.Shardkey, sqlmsg.SmID, sqlmsg.DateCreated, sqlmsg.OofShard).Scan(&retID)
