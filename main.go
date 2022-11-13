@@ -75,8 +75,6 @@ func main() {
 			log.Println(err3)
 		}
 		fmt.Println(sqlmsg.Delivery.Name)
-		//writeSqlmsg(sqlMessage)
-		//fmt.Println(sqlmsg.Delivery.City)
 
 		db, err2 := sql.Open("pgx", "postgres://postgres:Parol123!@localhost:5432/wb_l0")
 		if err2 != nil {
@@ -88,22 +86,22 @@ func main() {
 		if err != nil {
 			log.Println(err)
 		}
-		fmt.Println(retID)
+		//fmt.Println(retID)
 		_, err = db.Exec("INSERT INTO delivery(id,name,phone,zip,city,adress,region,email,orderid) VALUES (default,$1, $2, $3, $4, $5, $6, $7, $8)", sqlmsg.Delivery.Name, sqlmsg.Delivery.Phone, sqlmsg.Delivery.Zip, sqlmsg.Delivery.City, sqlmsg.Delivery.Address, sqlmsg.Delivery.Region, sqlmsg.Delivery.Email, retID)
 		if err != nil {
 			log.Println(err)
 		}
-		fmt.Println(sqlmsg.Delivery)
+		//fmt.Println(sqlmsg.Delivery)
 		_, err = db.Exec("INSERT INTO payment(id,transaction,request_id,currency,provider,amount,payment_dt,bank,delivery_cost,goods_total,custom_fee,orderid) VALUES (default,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)", sqlmsg.Payment.Transaction, sqlmsg.Payment.RequestID, sqlmsg.Payment.Currency, sqlmsg.Payment.Provider, sqlmsg.Payment.Amount, sqlmsg.Payment.PaymentDt, sqlmsg.Payment.Bank, sqlmsg.Payment.DeliveryCost, sqlmsg.Payment.GoodsTotal, sqlmsg.Payment.CustomFee, retID)
 		if err != nil {
 			log.Println(err)
 		}
-		fmt.Println(sqlmsg.Payment)
-		_, err = db.Exec("INSERT INTO items(id,chrt_id,track_number,price,rid,name,sale,size,total_price,nm_id,brand,status,orderid) VALUES (default,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)", sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, retID)
+		//fmt.Println(sqlmsg.Payment)
+		_, err = db.Exec("INSERT INTO items(id,chrt_id,track_number,price,rid,name,sale,size,total_price,nm_id,brand,status,orderid) VALUES (default,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)", sqlmsg.Items[0].ChrtID, sqlmsg.Items[0].TrackNumber, sqlmsg.Items[0].Price, sqlmsg.Items[0].Rid, sqlmsg.Items[0].Name, sqlmsg.Items[0].Sale, sqlmsg.Items[0].Size, sqlmsg.Items[0].TotalPrice, sqlmsg.Items[0].NmID, sqlmsg.Items[0].Brand, sqlmsg.Items[0].Status, retID)
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 		}
-		fmt.Println(sqlmsg.Items)
+		//fmt.Println(sqlmsg.Items)
 		defer db.Close()
 	}, stan.StartWithLastReceived())
 	if err5 != nil {
