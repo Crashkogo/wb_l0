@@ -14,6 +14,7 @@ import (
 
 var sqlmsg ordWB
 var err error
+var retID int8
 
 const (
 	clusterID = "wb_cluster"
@@ -72,7 +73,7 @@ func main() {
 		fmt.Println(sqlmsg.Delivery.Name)
 		//writeSqlmsg(sqlMessage)
 		fmt.Println(sqlmsg)
-		var retID int8
+
 		db, err2 := sql.Open("pgx", "postgres://postgres:Parol123!@localhost:5432/wb_l0")
 		if err2 != nil {
 			fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err2)
