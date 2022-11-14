@@ -14,7 +14,6 @@ import (
 )
 
 var sqlmsg ordWB
-
 var err error
 var retID int8
 var wg sync.WaitGroup
@@ -23,41 +22,8 @@ const (
 	clusterID = "wb_cluster"
 	clientID  = "wbID"
 	channel   = "wb_channel"
-	//durableID = "myDurable"
 )
 
-//	func writeSqlmsg(sqlmsg ordWB) {
-//		fmt.Println(sqlmsg)
-//		var retID int8
-//		db, err := sql.Open("pgx", "postgres://postgres:Parol123!@localhost:5432/wb_l0")
-//		if err != nil {
-//			fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-//			os.Exit(1)
-//		}
-//
-//		err = db.QueryRow("INSERT INTO orders(id,order_uid,track_number,entry,locale,internal_signature,customer_id,delivery_service,shardkey,sm_id,date_created,oof_shard) VALUES (default, $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id", sqlmsg.OrderUID, sqlmsg.TrackNumber, sqlmsg.Entry, sqlmsg.Locale, sqlmsg.InternalSignature, sqlmsg.CustomerID, sqlmsg.DeliveryService, sqlmsg.Shardkey, sqlmsg.SmID, sqlmsg.DateCreated, sqlmsg.OofShard).Scan(&retID)
-//		if err != nil {
-//			log.Println(err)
-//		}
-//		fmt.Println(retID)
-//		_, err = db.Exec("INSERT INTO delivery(id,name,phone,zip,city,adress,region,email,orderid) VALUES (default,$1, $2, $3, $4, $5, $6, $7, $8)", sqlmsg.Delivery.Name, sqlmsg.Delivery.Phone, sqlmsg.Delivery.Zip, sqlmsg.Delivery.City, sqlmsg.Delivery.Address, sqlmsg.Delivery.Region, sqlmsg.Delivery.Email, retID)
-//		if err != nil {
-//			log.Println(err)
-//		}
-//		fmt.Println(sqlmsg.Delivery)
-//		_, err = db.Exec("INSERT INTO payment(id,transaction,request_id,currency,provider,amount,payment_dt,bank,delivery_cost,goods_total,custom_fee,orderid) VALUES (default,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)", sqlmsg.Payment.Transaction, sqlmsg.Payment.RequestID, sqlmsg.Payment.Currency, sqlmsg.Payment.Provider, sqlmsg.Payment.Amount, sqlmsg.Payment.PaymentDt, sqlmsg.Payment.Bank, sqlmsg.Payment.DeliveryCost, sqlmsg.Payment.GoodsTotal, sqlmsg.Payment.CustomFee, retID)
-//		if err != nil {
-//			log.Println(err)
-//		}
-//		fmt.Println(sqlmsg.Payment)
-//		_, err = db.Exec("INSERT INTO items(id,chrt_id,track_number,price,rid,name,sale,size,total_price,nm_id,brand,status,orderid) VALUES (default,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)", sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, sqlmsg.Items, retID)
-//		if err != nil {
-//			log.Println(err)
-//		}
-//		fmt.Println(sqlmsg.Items)
-//		defer db.Close()
-//
-// }
 func main() {
 	sc, err := stan.Connect(clusterID, clientID)
 
@@ -73,37 +39,30 @@ func main() {
 	defer sc.Close()
 	wg.Add(1)
 	go func() {
-		sub, err5 := sc.Subscribe(channel, func(m *stan.Msg) {
+		sub, err := sc.Subscribe(channel, func(m *stan.Msg) {
 
-			//fmt.Printf("Received a message: %s\n", string(m.Data))
-			//wg.Done()
-			err3 := json.Unmarshal(m.Data, &sqlmsg)
-			if err3 != nil {
-				log.Println(err3)
+			err := json.Unmarshal(m.Data, &sqlmsg)
+			if err != nil {
+				log.Println(err)
 			}
-			//wg.Done()
 			fmt.Println(sqlmsg.Delivery.Name)
 			db, err := sql.Open("pgx", "postgres://postgres:Parol123!@localhost:5432/wb_l0")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 				os.Exit(1)
 			}
-			//wg.Done()
 			err = db.QueryRow("INSERT INTO orders(id,order_uid,track_number,entry,locale,internal_signature,customer_id,delivery_service,shardkey,sm_id,date_created,oof_shard) VALUES (default, $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id", sqlmsg.OrderUID, sqlmsg.TrackNumber, sqlmsg.Entry, sqlmsg.Locale, sqlmsg.InternalSignature, sqlmsg.CustomerID, sqlmsg.DeliveryService, sqlmsg.Shardkey, sqlmsg.SmID, sqlmsg.DateCreated, sqlmsg.OofShard).Scan(&retID)
 			if err != nil {
 				log.Println(err)
 			}
-			//wg.Done()
 			_, err = db.Exec("INSERT INTO delivery(id,name,phone,zip,city,adress,region,email,orderid) VALUES (default,$1, $2, $3, $4, $5, $6, $7, $8)", sqlmsg.Delivery.Name, sqlmsg.Delivery.Phone, sqlmsg.Delivery.Zip, sqlmsg.Delivery.City, sqlmsg.Delivery.Address, sqlmsg.Delivery.Region, sqlmsg.Delivery.Email, retID)
 			if err != nil {
 				log.Println(err)
 			}
-			//wg.Done()
 			_, err = db.Exec("INSERT INTO payment(id,transaction,request_id,currency,provider,amount,payment_dt,bank,delivery_cost,goods_total,custom_fee,orderid) VALUES (default,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)", sqlmsg.Payment.Transaction, sqlmsg.Payment.RequestID, sqlmsg.Payment.Currency, sqlmsg.Payment.Provider, sqlmsg.Payment.Amount, sqlmsg.Payment.PaymentDt, sqlmsg.Payment.Bank, sqlmsg.Payment.DeliveryCost, sqlmsg.Payment.GoodsTotal, sqlmsg.Payment.CustomFee, retID)
 			if err != nil {
 				log.Println(err)
 			}
-			//wg.Done()
 			_, err = db.Exec("INSERT INTO items(id,chrt_id,track_number,price,rid,name,sale,size,total_price,nm_id,brand,status,orderid) VALUES (default,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)", sqlmsg.Items[0].ChrtID, sqlmsg.Items[0].TrackNumber, sqlmsg.Items[0].Price, sqlmsg.Items[0].Rid, sqlmsg.Items[0].Name, sqlmsg.Items[0].Sale, sqlmsg.Items[0].Size, sqlmsg.Items[0].TotalPrice, sqlmsg.Items[0].NmID, sqlmsg.Items[0].Brand, sqlmsg.Items[0].Status, retID)
 			if err != nil {
 				fmt.Println(err)
@@ -113,14 +72,13 @@ func main() {
 			//defer db.Close()
 			defer db.Close()
 		}, stan.StartWithLastReceived())
-		if err5 != nil {
-			log.Println(err5)
+		if err != nil {
+			log.Println(err)
 		}
 		//res, err := db.Exec //работа с SQL -
 		defer sub.Unsubscribe()
 
 	}()
-	//работа с SQL
 
 	wg.Wait()
 	fmt.Println("Обработка выполнена!")
