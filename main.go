@@ -7,6 +7,8 @@ import (
 	stan "github.com/nats-io/stan.go"
 	log "log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 	//"github.com/shijuvar/gokit/examples/nats-streaming/pb"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -33,8 +35,6 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
-	// Close connection
-	defer sc.Close()
 
 	sub, err := sc.Subscribe(channel, func(m *stan.Msg) {
 
@@ -70,10 +70,25 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
-	//res, err := db.Exec //работа с SQL -
-	defer sub.Unsubscribe()
 
-	fmt.Println("Обработка выполнена!")
+	defer sub.Unsubscribe()
+	defer sc.Close()
+
+	c := make(chan os.Signal, 1)
+
+	signal.Notify(c, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
+
+	for {
+		select {
+		case <-c:
+			fmt.Println("Process terminated")
+			return
+		case <-time.After(10 * time.Second):
+			fmt.Println("debug: process is working")
+
+		}
+	}
+
 }
 
 type ordWB struct {
