@@ -15,7 +15,7 @@ import (
 )
 
 var sqlmsg ordWB
-var err error
+
 var retID int8
 
 const (
