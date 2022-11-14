@@ -68,8 +68,7 @@ func main() {
 				fmt.Println(err)
 			}
 			wg.Done()
-			//fmt.Println(sqlmsg.Items)
-			//defer db.Close()
+			
 			defer db.Close()
 		}, stan.StartWithLastReceived())
 		if err != nil {
