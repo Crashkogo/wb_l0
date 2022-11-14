@@ -69,6 +69,8 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
+	// Close connection
+	defer sc.Close()
 	wg.Add(7)
 	go func() {
 		sub, err5 := sc.Subscribe(channel, func(m *stan.Msg) {
@@ -117,8 +119,6 @@ func main() {
 		//res, err := db.Exec //работа с SQL -
 		defer sub.Unsubscribe()
 
-		// Close connection
-		defer sc.Close()
 	}()
 	//работа с SQL
 
