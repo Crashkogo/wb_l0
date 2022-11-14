@@ -68,7 +68,7 @@ func main() {
 				fmt.Println(err)
 			}
 			wg.Done()
-			
+
 			defer db.Close()
 		}, stan.StartWithLastReceived())
 		if err != nil {
