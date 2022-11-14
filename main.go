@@ -41,7 +41,7 @@ func main() {
 	go func() {
 		sub, err := sc.Subscribe(channel, func(m *stan.Msg) {
 
-			err := json.Unmarshal(m.Data, &sqlmsg)
+			err = json.Unmarshal(m.Data, &sqlmsg)
 			if err != nil {
 				log.Println(err)
 			}
