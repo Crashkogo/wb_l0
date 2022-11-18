@@ -11,10 +11,8 @@ import (
 	log "log"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -38,7 +36,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
-	//Заполняем кэш
+	defer db.Close()
+	//Заполняем кэш +
 	rows, err := db.Query("SELECT * FROM orders")
 	if err != nil {
 		log.Println(err)
@@ -53,32 +52,28 @@ func main() {
 		err = json.Unmarshal(jsonMsg, &sqlmsg)
 		myCache.Set(ResultID, sqlmsg, 0*time.Minute)
 	}
+	//Заполняем кэш -
+
+	//Подключаемся к Nats
 	sc, err := stan.Connect(clusterID, clientID)
-
 	if err != nil {
 		log.Println(err)
 	}
-	// Simple Synchronous Publisher
-	err = sc.Publish(channel, []byte("{\n  \"order_uid\": \"b563feb7b2b84b6test\",\n  \"track_number\": \"WBILMTESTTRACK\",\n  \"entry\": \"WBIL\",\n  \"delivery\": {\n    \"name\": \"Test Testov\",\n    \"phone\": \"+9720000000\",\n    \"zip\": \"2639809\",\n    \"city\": \"Kiryat Mozkin\",\n    \"address\": \"Ploshad Mira 15\",\n    \"region\": \"Kraiot\",\n    \"email\": \"test@gmail.com\"\n  },\n  \"payment\": {\n    \"transaction\": \"b563feb7b2b84b6test\",\n    \"request_id\": \"\",\n    \"currency\": \"USD\",\n    \"provider\": \"wbpay\",\n    \"amount\": 1817,\n    \"payment_dt\": 1637907727,\n    \"bank\": \"alpha\",\n    \"delivery_cost\": 1500,\n    \"goods_total\": 317,\n    \"custom_fee\": 0\n  },\n  \"items\": [\n    {\n      \"chrt_id\": 9934930,\n      \"track_number\": \"WBILMTESTTRACK\",\n      \"price\": 453,\n      \"rid\": \"ab4219087a764ae0btest\",\n      \"name\": \"Mascaras\",\n      \"sale\": 30,\n      \"size\": \"0\",\n      \"total_price\": 317,\n      \"nm_id\": 2389212,\n      \"brand\": \"Vivienne Sabo\",\n      \"status\": 202\n    }\n  ],\n  \"locale\": \"en\",\n  \"internal_signature\": \"\",\n  \"customer_id\": \"test\",\n  \"delivery_service\": \"meest\",\n  \"shardkey\": \"9\",\n  \"sm_id\": 99,\n  \"date_created\": \"2021-11-26T06:22:19Z\",\n  \"oof_shard\": \"1\"\n}")) // does not return until an ack has been received from NATS Streaming
-	if err != nil {
-		log.Println(err)
-	}
-
+	//Подписываемся на получение сообщений в NATS
 	sub, err := sc.Subscribe(channel, func(m *stan.Msg) {
 
 		err = json.Unmarshal(m.Data, &sqlmsg)
 		if err != nil {
 			log.Println(err)
+			fmt.Println("Неверный формат сообщения")
+		} else {
+			err = db.QueryRow("INSERT INTO orders(id,uid,message) VALUES (default, $1,$2) RETURNING id", sqlmsg.OrderUID, m.Data).Scan(&retID)
+			if err != nil {
+				log.Println(err)
+			}
+			//делаем запись в кэш
+			myCache.Set(retID, sqlmsg, 0*time.Minute)
 		}
-
-		err = db.QueryRow("INSERT INTO orders(id,uid,message) VALUES (default, $1,$2) RETURNING id", sqlmsg.OrderUID, m.Data).Scan(&retID)
-		if err != nil {
-			log.Println(err)
-		}
-		//делаем запись в кэш
-		myCache.Set(retID, sqlmsg, 0*time.Minute)
-
-		defer db.Close()
 	}, stan.StartWithLastReceived())
 	if err != nil {
 		log.Println(err)
@@ -91,6 +86,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		tpl.Execute(w, nil)
 	})
+	//Реализация помска по кэшу
 	http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
 
 		sValue := r.FormValue("q")
@@ -100,6 +96,7 @@ func main() {
 		message, haveСache := myCache.Get(retID)
 		if haveСache == true {
 			cMsg := message.(ordWB)
+			fmt.Fprintf(w, "Номер сообщения: %v \n", retID)
 			fmt.Fprintf(w, "MAIN: order_uid: %v, track_number: %v, entry: %v, locale: %v, internal_signature:%v, customer_id:%v, delivery_service:%v, shardkey: %v, sm_id: %v, date_created:%v, oof_shard: %v\n", cMsg.OrderUID, cMsg.TrackNumber, cMsg.Entry, cMsg.Locale, cMsg.InternalSignature, cMsg.CustomerID, cMsg.DeliveryService, cMsg.Shardkey, cMsg.SmID, cMsg.DateCreated, cMsg.OofShard)
 			fmt.Fprintf(w, "DELIVERY: name: %v, phone: %v, zip: %v, city: %v, adress: %v, region: %v, email: %v \n", cMsg.Delivery.Name, cMsg.Delivery.Phone, cMsg.Delivery.Zip, cMsg.Delivery.City, cMsg.Delivery.Address, cMsg.Delivery.Region, cMsg.Delivery.Email)
 			fmt.Fprintf(w, "PAYMENT: transaction: %v, request_id: %v, currency: %v, provider: %v, amount: %v, payment_dt: %v, bank: %v, delivery_cost: %v, goods_total: %v, custom_fee: %v\n", cMsg.Payment.Transaction, cMsg.Payment.RequestID, cMsg.Payment.Currency, cMsg.Payment.Provider, cMsg.Payment.Amount, cMsg.Payment.PaymentDt, cMsg.Payment.Bank, cMsg.Payment.DeliveryCost, cMsg.Payment.GoodsTotal, cMsg.Payment.CustomFee)
@@ -112,21 +109,6 @@ func main() {
 	})
 	http.ListenAndServe(":80", nil)
 	//Конец веб сервер
-
-	c := make(chan os.Signal, 1)
-
-	signal.Notify(c, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
-	for {
-		select {
-		case <-c:
-			fmt.Println("Process terminated")
-			return
-		case <-time.After(10 * time.Second):
-			fmt.Println("debug: process is working")
-
-		}
-	}
-
 }
 
 type ordWB struct {
