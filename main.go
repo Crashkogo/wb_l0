@@ -94,8 +94,8 @@ func main() {
 	http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
 
 		sValue := r.FormValue("q")
-		myInt, _ := strconv.ParseInt(sValue, 10, 0)
-		retID = int8(myInt)
+		tempRetid, _ := strconv.ParseInt(sValue, 10, 0)
+		retID = int8(tempRetid)
 		fmt.Println(retID)
 		message, haveСache := myCache.Get(retID)
 		if haveСache == true {
