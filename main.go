@@ -22,9 +22,10 @@ var retID int8
 var jsonMsg []byte
 
 const (
-	clusterID = "wb_cluster"
-	clientID  = "wbID"
-	channel   = "wb_channel"
+	clusterID   = "wb_cluster"
+	clientID    = "wbID"
+	channel     = "wb_channel"
+	channelDead = "wb_channel.dead"
 )
 
 func main() {
@@ -65,14 +66,23 @@ func main() {
 		err = json.Unmarshal(m.Data, &sqlmsg)
 		if err != nil {
 			log.Println(err)
-			fmt.Println("Неверный формат сообщения")
+			//Публикуем неверное сообщение в "мёртвый канал"
+			err = sc.Publish(channelDead, m.Data)
+			fmt.Println("Не удалось преобразовать сообщение в структуру, проверьте сообщение")
 		} else {
-			err = db.QueryRow("INSERT INTO orders(id,uid,message) VALUES (default, $1,$2) RETURNING id", sqlmsg.OrderUID, m.Data).Scan(&retID)
-			if err != nil {
-				log.Println(err)
+			//проверяем orderUID на наличие
+			if sqlmsg.OrderUID != "" {
+				err = db.QueryRow("INSERT INTO orders(id,uid,message) VALUES (default, $1,$2) RETURNING id", sqlmsg.OrderUID, m.Data).Scan(&retID)
+				if err != nil {
+					log.Println(err)
+				}
+				//делаем запись в кэш
+				myCache.Set(retID, sqlmsg, 0*time.Minute)
+			} else {
+				//Публикуем неверное сообщение в "мёртвый канал"
+				err = sc.Publish(channelDead, m.Data)
+				fmt.Println("Пустое поле OrderUID невозможно записать.")
 			}
-			//делаем запись в кэш
-			myCache.Set(retID, sqlmsg, 0*time.Minute)
 		}
 	}, stan.StartWithLastReceived())
 	if err != nil {
